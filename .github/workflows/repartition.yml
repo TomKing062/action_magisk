@@ -1,0 +1,73 @@
+name: patch-recovery-repartition
+
+on:
+  workflow_dispatch:
+    inputs:
+      IMG_URL:    
+        description: 'URL of recovery.img'
+        required: true
+        default: ''
+      PART_NAME:    
+        description: 'shrink a partition(keep empty if the partition is not ext4)'
+        required: false
+        default: ''
+      NEW_PART_SIZE_MB:    
+        description: 'new size for partition(unit is MB)'
+        required: false
+        default: ''
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: main
+        path: main
+
+    - name: patch
+      run: |
+        sudo apt update
+        sudo apt -y install android-sdk-libsparse-utils
+        curl -o recovery.img -L "${{ github.event.inputs.IMG_URL }}"
+        curl -o magisk.apk -L $(curl -s https://api.github.com/repos/topjohnwu/Magisk/releases/latest | grep -Po '(?<=download_url\"\: \").*Magisk.*apk')
+        wget https://raw.githubusercontent.com/magojohnji/magiskboot-linux/main/x86_64/magiskboot
+        mkdir zzz
+        busybox unzip -oq magisk.apk -d zzz
+        mv main/boot_patch.sh ./
+        chmod +x boot_patch.sh
+        ./boot_patch.sh
+        dd if=/dev/zero of=ramdisk.img bs=1M count=32
+        mkfs.ext4 ramdisk.img
+        mkdir ramdisk
+        sudo mount -t ext4 -o rw ramdisk.img ramdisk
+        cd ramdisk
+        sudo cpio -idv < ../ramdisk.cpio
+        cd ..
+        sudo umount ramdisk
+
+    - name: generate partition
+      if: |
+        github.event.inputs.PART_NAME != null
+        && github.event.inputs.NEW_PART_SIZE_MB != null
+      run: |
+        dd if=/dev/zero of=temp.img bs=1M count=${{ github.event.inputs.NEW_PART_SIZE_MB }}
+        mkfs.ext4 temp.img
+        img2simg temp.img ${{ github.event.inputs.PART_NAME }}.img
+
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: | 
+          ramdisk.img
+          ${{ github.event.inputs.PART_NAME }}.img
+        name: ${{ github.run_id }}
+        tag_name: ${{ github.run_id }}
+        body: |
+          URL: ${{ github.event.inputs.IMG_URL }}
+          PART: ${{ github.event.inputs.PART_NAME }}
+          PART_SIZE: ${{ github.event.inputs.NEW_PART_SIZE_MB }}M
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
