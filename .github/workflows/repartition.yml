@@ -61,6 +61,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: | 
+          patched.img
           ramdisk.img
           ${{ github.event.inputs.PART_NAME }}.img
         name: ${{ github.run_id }}

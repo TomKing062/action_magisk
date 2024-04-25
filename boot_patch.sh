@@ -107,3 +107,52 @@ $SKIP64 ./magiskboot compress=xz zzz/lib/$cpu_abi/libmagisk64.so magisk64.xz
 "backup ramdisk.cpio.orig" \
 "mkdir 000 .backup" \
 "add 000 .backup/.magisk config"
+
+#################
+# Binary Patches
+#################
+
+for dt in dtb kernel_dtb extra; do
+  if [ -f $dt ]; then
+    if ! ./magiskboot dtb $dt test; then
+      echo "! Boot image $dt was patched by old (unsupported) Magisk"
+      echo "! Please try again with *unpatched* boot image"
+    fi
+    if ./magiskboot dtb $dt patch; then
+      echo "- Patch fstab in boot image $dt"
+    fi
+  fi
+done
+
+if [ -f kernel ]; then
+  PATCHEDKERNEL=false
+  # Remove Samsung RKP
+  ./magiskboot hexpatch kernel \
+  49010054011440B93FA00F71E9000054010840B93FA00F7189000054001840B91FA00F7188010054 \
+  A1020054011440B93FA00F7140020054010840B93FA00F71E0010054001840B91FA00F7181010054 \
+  && PATCHEDKERNEL=true
+
+  # Remove Samsung defex
+  # Before: [mov w2, #-221]   (-__NR_execve)
+  # After:  [mov w2, #-32768]
+  ./magiskboot hexpatch kernel 821B8012 E2FF8F12 && PATCHEDKERNEL=true
+
+  # Force kernel to load rootfs for legacy SAR devices
+  # skip_initramfs -> want_initramfs
+  ./magiskboot hexpatch kernel \
+  736B69705F696E697472616D667300 \
+  77616E745F696E697472616D667300 \
+  && PATCHEDKERNEL=true
+
+  # If the kernel doesn't need to be patched at all,
+  # keep raw kernel to avoid bootloops on some weird devices
+  $PATCHEDKERNEL || rm -f kernel
+fi
+
+#################
+# Repack & Flash
+#################
+
+echo "- Repacking boot image"
+./magiskboot repack recovery.img patched.img || echo "! Unable to repack boot image"
+
