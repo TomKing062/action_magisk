@@ -32,7 +32,7 @@ jobs:
         sudo apt update
         sudo apt -y install android-sdk-libsparse-utils
         curl -o recovery.img -L "${{ github.event.inputs.IMG_URL }}"
-        curl -o magisk.apk -L $(curl -s https://api.github.com/repos/topjohnwu/Magisk/releases/latest | grep -Po '(?<=download_url\"\: \").*Magisk.*apk')
+        curl -o magisk.apk -L $(curl -s https://api.github.com/repos/topjohnwu/Magisk/releases/tags/v25.2 | grep -Po '(?<=download_url\"\: \").*Magisk.*apk')
         wget https://raw.githubusercontent.com/magojohnji/magiskboot-linux/main/x86_64/magiskboot
         mkdir zzz
         busybox unzip -oq magisk.apk -d zzz
