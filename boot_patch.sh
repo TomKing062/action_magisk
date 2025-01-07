@@ -1,8 +1,8 @@
 # Flags
 export KEEPVERITY=false
 export KEEPFORCEENCRYPT=false
-export RECOVERYMODE=false
-export PREINITDEVICE=cache
+export RECOVERYMODE=true
+export PREINITDEVICE=userdata
 
 #########
 # Unpack
@@ -92,17 +92,17 @@ echo "PREINITDEVICE=$PREINITDEVICE" >> config
 [ ! -z $SHA1 ] && echo "SHA1=$SHA1" >> config
 
 # Compress to save precious ramdisk space
-./magiskboot compress=xz zzz/lib/armeabi-v7a/libmagisk32.so magisk32.xz
-$SKIP64 ./magiskboot compress=xz zzz/lib/$cpu_abi/libmagisk64.so magisk64.xz
+./magiskboot compress=xz zzz/lib/$cpu_abi/libmagisk.so magisk.xz
 ./magiskboot compress=xz zzz/assets/stub.apk stub.xz
+./magiskboot compress=xz zzz/lib/$cpu_abi/libinit-ld.so init-ld.xz
 
 ./magiskboot cpio ramdisk.cpio \
 "add 0750 $INIT zzz/lib/$cpu_abi/libmagiskinit.so" \
 "mkdir 0750 overlay.d" \
 "mkdir 0750 overlay.d/sbin" \
-"add 0644 overlay.d/sbin/magisk32.xz magisk32.xz" \
-"$SKIP64 add 0644 overlay.d/sbin/magisk64.xz magisk64.xz" \
+"add 0644 overlay.d/sbin/magisk.xz magisk.xz" \
 "add 0644 overlay.d/sbin/stub.xz stub.xz" \
+"add 0644 overlay.d/sbin/init-ld.xz init-ld.xz" \
 "patch" \
 "backup ramdisk.cpio.orig" \
 "mkdir 000 .backup" \
@@ -136,6 +136,13 @@ if [ -f kernel ]; then
   # Before: [mov w2, #-221]   (-__NR_execve)
   # After:  [mov w2, #-32768]
   ./magiskboot hexpatch kernel 821B8012 E2FF8F12 && PATCHEDKERNEL=true
+
+  # Disable Samsung PROCA
+  # proca_config -> proca_magisk
+  ./magiskboot hexpatch kernel \
+  70726F63615F636F6E66696700 \
+  70726F63615F6D616769736B00 \
+  && PATCHEDKERNEL=true
 
   # Force kernel to load rootfs for legacy SAR devices
   # skip_initramfs -> want_initramfs
