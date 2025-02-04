@@ -1,3 +1,7 @@
+## **Desperated**
+
+use [action_big_resign_with_magisk](https://github.com/TomKing062/action_big_resign_with_magisk)
+
 ## 2 actions in this repo:
 
 ### patch-recovery-repartition-magisk-latest
