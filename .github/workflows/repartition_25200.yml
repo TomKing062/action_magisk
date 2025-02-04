@@ -1,4 +1,4 @@
-name: patch-recovery-repartition-magisk-latest
+name: patch-recovery-repartition-magisk-25200
 
 on:
   workflow_dispatch:
@@ -32,13 +32,13 @@ jobs:
         sudo apt update
         sudo apt -y install android-sdk-libsparse-utils
         curl -o recovery.img -L "${{ github.event.inputs.IMG_URL }}"
-        curl -o magisk.apk -L $(curl -s https://api.github.com/repos/topjohnwu/Magisk/releases/latest | grep -Po '(?<=download_url\"\: \").*Magisk.*apk')
+        curl -o magisk.apk -L $(curl -s https://api.github.com/repos/topjohnwu/Magisk/releases/tags/v25.2 | grep -Po '(?<=download_url\"\: \").*Magisk.*apk')
         wget https://raw.githubusercontent.com/magojohnji/magiskboot-linux/main/x86_64/magiskboot
         mkdir zzz
         busybox unzip -oq magisk.apk -d zzz
-        mv main/boot_patch.sh ./
-        chmod +x boot_patch.sh
-        ./boot_patch.sh
+        mv main/boot_patch_25200.sh ./
+        chmod +x boot_patch_25200.sh
+        ./boot_patch_25200.sh
         dd if=/dev/zero of=ramdisk.img bs=1M count=32
         mkfs.ext4 ramdisk.img
         mkdir ramdisk
